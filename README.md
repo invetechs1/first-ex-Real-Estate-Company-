@@ -41,6 +41,21 @@ Any static host works: GitHub Pages, Netlify, Vercel, S3, Nginx, or a shared hos
 A GitHub Pages workflow is included at `.github/workflows/pages.yml` — enable Pages
 (Settings → Pages → Source: GitHub Actions) and every push to the default branch publishes.
 
+### Single-file build
+
+For sending the site as an attachment, putting it on a USB stick, or hosting it somewhere with
+a strict content-security-policy, `tools/build-standalone.py` inlines the stylesheet, the scripts
+and the webfonts (as base64 data URIs) into one HTML file with no external requests:
+
+```bash
+python3 tools/build-standalone.py
+# dist/first-ex-standalone.html   complete document — open it directly
+# dist/first-ex-embed.html        same page without the <html>/<head>/<body> wrapper
+```
+
+The first run downloads the fonts and caches them in `.fontcache/`; later runs work offline.
+Both outputs are generated, so `dist/` is not tracked in git.
+
 ## Editing content
 
 All copy — both languages — lives in **`assets/js/data.js`**. Nothing else needs to be touched
@@ -80,6 +95,7 @@ assets/css/styles.css      Design system + all page styles (RTL-aware)
 assets/js/data.js          Bilingual content: company, projects, UI strings
 assets/js/main.js          Language switching, portfolio, dialog, form, motion
 assets/img/                Favicon and social share image
+tools/build-standalone.py  Bundle everything into one self-contained HTML file
 .github/workflows/pages.yml  Deploy to GitHub Pages
 ```
 
