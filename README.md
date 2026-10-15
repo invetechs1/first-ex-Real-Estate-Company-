@@ -29,6 +29,8 @@ no build step, no framework, no npm install.
 - **Accessible**: skip link, focus states, keyboard-dismissible dialog, `prefers-reduced-motion`
   support, semantic landmarks.
 - **Fast**: ~3 files, no dependencies, artwork drawn as inline SVG.
+- **Findable**: canonical and `hreflang` links for both languages, Organization
+  structured data carrying the registration details, `sitemap.xml` and `robots.txt`.
 
 ## Running it
 
@@ -54,7 +56,9 @@ python3 tools/build-standalone.py
 ```
 
 The first run downloads the fonts and caches them in `.fontcache/`; later runs work offline.
-Both outputs are generated, so `dist/` is not tracked in git.
+Both outputs are generated, so `dist/` is not tracked in git. If a font family fails to
+resolve the build stops rather than producing a page that silently falls back to system
+fonts.
 
 ## Editing content
 
@@ -94,10 +98,37 @@ index.html                 Page markup, bound to translation keys
 assets/css/styles.css      Design system + all page styles (RTL-aware)
 assets/js/data.js          Bilingual content: company, projects, UI strings
 assets/js/main.js          Language switching, portfolio, dialog, form, motion
-assets/img/                Favicon and social share image
+assets/img/                Favicon and generated social share image
+robots.txt, sitemap.xml    Search engine directives
 tools/build-standalone.py  Bundle everything into one self-contained HTML file
+tools/build-og-image.py    Render the social share image
 .github/workflows/pages.yml  Deploy to GitHub Pages
 ```
+
+## Before going live: set the domain
+
+Link previews and search directives need absolute URLs, so the domain is written
+into three files. It currently reads `https://firstex.estate` (taken from the company
+email address) — **confirm it, and if the site lives elsewhere, change it in all three**:
+
+- `index.html` — `canonical`, the three `hreflang` links, and the `og:` / `twitter:` tags
+- `sitemap.xml` — `<loc>` and the alternate links
+- `robots.txt` — the `Sitemap:` line
+
+### Social share image
+
+`assets/img/og-cover.jpg` is what WhatsApp, LinkedIn and X show when the link is shared.
+It is generated, not hand-drawn — `tools/build-og-image.py` composes it as HTML using the
+site's own fonts and colours, then rasterises it at 1200x630:
+
+```bash
+pip install playwright && playwright install chromium   # once
+python3 tools/build-og-image.py
+```
+
+Edit the card markup inside that script and re-run it to change the image. It is JPEG
+rather than PNG because the card is mostly smooth gradient (~64 KB against ~370 KB), and
+some chat clients skip previews over a few hundred KB.
 
 ## Company details
 

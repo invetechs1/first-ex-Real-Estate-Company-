@@ -34,12 +34,15 @@ CACHE = ROOT / '.fontcache'
 # English site; arabic covers the Arabic one. Everything else (Cyrillic, Greek,
 # Vietnamese) would only pad the file.
 FONT_REQUESTS = [
-    ('https://fonts.googleapis.com/css2'
+    ('Inter',
+     'https://fonts.googleapis.com/css2'
      '?family=Inter:wght@300..700&display=swap', {'latin', 'latin-ext'}),
-    ('https://fonts.googleapis.com/css2'
+    ('Fraunces',
+     'https://fonts.googleapis.com/css2'
      '?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..700'
      '&display=swap', {'latin'}),
-    ('https://fonts.googleapis.com/css2'
+    ('IBM Plex Sans Arabic',
+     'https://fonts.googleapis.com/css2'
      '?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700'
      '&display=swap', {'latin', 'arabic'}),
 ]
@@ -72,8 +75,11 @@ def fetch(url: str) -> bytes:
 def build_font_css() -> str:
     """Return @font-face rules with every woff2 embedded as a data URI."""
     blocks = []
-    for url, wanted_subsets in FONT_REQUESTS:
+    counts = {}
+
+    for family, url, wanted_subsets in FONT_REQUESTS:
         css = fetch(url).decode('utf-8')
+        counts[family] = 0
 
         # Google emits "/* subset */" immediately before each @font-face rule.
         for subset, rule in re.findall(
@@ -81,19 +87,36 @@ def build_font_css() -> str:
         ):
             if subset not in wanted_subsets:
                 continue
-            match = re.search(r'url\((https://[^)]+\.woff2)\)', rule)
+
+            # Static faces are served as a .woff2 filename, variable ones from
+            # a /l/font?kit=... endpoint with no extension. Key off the format
+            # hint instead of the URL, or the variable families go missing.
+            match = re.search(
+                r"url\((https://[^)]+)\)\s*format\('woff2'\)", rule
+            )
             if not match:
                 continue
+
             data = base64.b64encode(fetch(match.group(1))).decode('ascii')
             blocks.append(rule.replace(
                 match.group(1),
                 'data:font/woff2;base64,' + data,
             ))
+            counts[family] += 1
 
-    if not blocks:
-        raise SystemExit('No font faces were resolved — refusing to build.')
+    # A family that silently resolves to zero faces falls back to a system
+    # font and quietly changes the design, so treat it as a build failure.
+    missing = [family for family, n in counts.items() if n == 0]
+    if missing:
+        raise SystemExit(
+            'No font faces resolved for: %s\nRefusing to build a page that '
+            'would silently fall back to system fonts.' % ', '.join(missing)
+        )
 
-    print('  inlined %d font faces' % len(blocks), file=sys.stderr)
+    print('  inlined %d font faces (%s)' % (
+        len(blocks),
+        ', '.join('%s %d' % (f, n) for f, n in counts.items()),
+    ), file=sys.stderr)
     return '\n'.join(blocks)
 
 

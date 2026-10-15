@@ -1,0 +1,7 @@
+# First Ex — https://firstex.estate
+# If the site is served from another domain, update the Sitemap line below.
+
+User-agent: *
+Allow: /
+
+Sitemap: https://firstex.estate/sitemap.xml
